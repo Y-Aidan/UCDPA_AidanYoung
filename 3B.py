@@ -1,9 +1,9 @@
+#My Data doesn't have any any blank entries as I was quite aggressive in my dropna
+#I should have almost no Duplicates as LEI Codes should be unique to entities
 import pandas as pd
 
-#Downloading large file from GLEIF.org with LEI details for Euronext LEI Codes.
-#CSV file is sparse so DropNA is used to remove excess columns
-#Columns all have . in name so I renamed them to be able to work with them.
-df = pd.read_csv(r'C:\Users\Aido\Downloads\lei-records.csv', sep=',', low_memory=False)
+#Importing the CSV again as normal
+df = pd.read_csv(r'C:\Users\Aido\Downloads\lei-records.csv', sep=',', dtype=object)
 df = df.dropna(axis=1)
 df = df.rename(columns={"Entity.LegalName": "LegalName",
                               "Entity.LegalAddress.FirstAddressLine": "LegalAddress",
@@ -23,24 +23,19 @@ df = df.rename(columns={"Entity.LegalName": "LegalName",
                               "Registration.ValidationAuthority.ValidationAuthorityID": "ValidationAuthorityID"
                               })
 
-#Same as above but with the ELF (Entity Legal Form) List.
-df_ELF = pd.read_csv(r'C:\Users\Aido\Downloads\elf-code-list.csv', sep=',', dtype=object)
-df_ELF = df_ELF.drop([0,1])
-df_ELF = df_ELF.dropna(axis=1)
-df_ELF = df_ELF.drop(labels=['Country Code (ISO 3166-1)','Language',
-                             'Language Code (ISO 639-1)','Date created YYYY-MM-DD (ISO 8601)',
-                             'ELF Status ACTV/INAC'], axis=1, inplace=False)
-df_ELF = df_ELF.rename(columns={'Entity Legal Form name Local name':'LegalFormName',
-                                'ELF Code':'ELFCode'})
+duplicates = df.duplicated(subset ='LegalName', keep = False)
+duplicates_name = df[duplicates].sort_values('LegalName')
+X = ['LegalName', 'LegalAddress', 'Status']
+print(duplicates_name[X])
+#                         LegalName                 LegalAddress     Status
+#2826        Bacchantes Two Limited            First Names House    RETIRED
+#4320        Bacchantes Two Limited            First Names House     LAPSED
+#355   Carbery Food Ingredients Ltd                    Ballineen     ISSUED
+#2321  Carbery Food Ingredients Ltd  Ballineen, Co Cork, Ireland  DUPLICATE
+#193     The McLaughlin Partnership             49 Dawson Street     ISSUED
+#3803    The McLaughlin Partnership           30 Beech Park Road     ISSUED
 
-#Replicated the ELFCode column in the main Dataset.
-#Now I want to cycle through the ELFCode column and replace it with LegalFormName from df_ELF
-df['ELFName'] = df['ELFCode']
+#Of the 6 above entities, only Carbery Food Ingredients Ltd is actually a Duplicate. The McLaughlin Partnerships are
+#2 distinct Legal Entities with the same name and the original Bacchantes Two Limited dissolved before the second was
+#created.
 
-new_transformed_df = df.replace(dict(zip(df_ELF.ELFCode, df_ELF.LegalFormName)))
-
-#for df['ELFName'] in df
-# if df['ELFName'][i] == df_ELF['ELFCode'][j]
-# df['ELFName'][i] becomes df_ELF['LegalFormName[j]
-
-print(new_transformed_df.describe())
